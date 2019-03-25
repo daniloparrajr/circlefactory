@@ -6,12 +6,14 @@
         var $canvas;
         var element = $(this);
 
-        var Circle = function (x, y) {
+        var Circle = function (x = 0, y = 0, xc = false, yc = false, a = 0.01) {
             var _ = this;
             _.x = x;
             _.y = y;
             _.radius = 3;
-            _.alpha = 0;
+            _.alpha = a;
+            _.xcenter = xc;
+            _.ycenter = yc;
         };
 
         var CircleFactory = function ($el, options) {
@@ -58,9 +60,8 @@
                 _.canvas.attr('width', _.canvas.parent().outerWidth());
                 _.canvas.attr('height', _.canvas.parent().outerHeight());
                 _.clearCanvas();
-                _.drawCircles();
+                _.resizeDrawCircles();
             }, false);
-            // _.fixCanvasDpi();
         };
 
         /**
@@ -69,9 +70,9 @@
          * @param int x new circle x axis.
          * @param int y new circle y axis.
          */
-        CircleFactory.prototype.addCircle = function (x, y) {
+        CircleFactory.prototype.addCircle = function (x, y, xc, yc, a) {
             var _ = this;
-            _.circleArray[_.circleArray.length] = new Circle(x, y);
+            _.circleArray[_.circleArray.length] = new Circle(x, y, xc, yc, a);
         };
 
         CircleFactory.prototype.fixCanvasDpi = function () {
@@ -113,6 +114,7 @@
                 if (_.circleArray[_.circleArray.length - 1].alpha >= 1) {
                     var newX = _.circleArray[_.circleArray.length - 1].x;
                     var newY = _.circleArray[_.circleArray.length - 1].y;
+                    var xCenter = false;
                     // Dont add if we reach to end of totalCount;
                     if (_.circleArray.length === _.totalCount) {
                         continue;
@@ -150,13 +152,83 @@
 
                     if (_.xCenter === true) {
                         newX = _.canvas.width() / 2;
+                        xCenter = true;
                     }
 
-                    _.addCircle(newX, newY);
+                    _.addCircle(newX, newY, xCenter);
                     _.pathCounter++;
                 }
             }
         };
+
+        /**
+         *  Draw Final circle resulat upon resize
+         */
+        CircleFactory.prototype.resizeDrawCircles = function () {
+            var _ = this;
+            var pathCounter = 0;
+            var pathCrawler = 0;
+            var arcX = _._options.x;
+            var arcY = _._options.y;
+            
+            if ( 'center' === arcX ) {
+                arcX = _.canvas.width() / 2;
+            }
+            
+            _.ctx.save();
+            for (var i = 0; i < _.circleArray.length; i++) {
+                _.ctx.globalAlpha = 1;
+                _.ctx.fillStyle = _._options.color;
+                _.ctx.beginPath();
+
+                // Variables
+                var currentDirection = _._options.path[pathCrawler].direction;
+                // var xCenter = _._options.path[pathCrawler].xCenter;
+                var directionCount = _._options.path[pathCrawler].count;
+
+                // Determine the direction.
+                if (pathCounter === directionCount) {
+                    pathCrawler++;
+                    if (pathCrawler === _._options.path.length) {
+                        pathCrawler = _._options.path.length - 1;
+                    }
+
+                    // Change Particle Direction.
+                    currentDirection = _._options.path[pathCrawler].direction;
+
+                    // Reset Path Counter.
+                    pathCounter = 0;
+                }
+
+                // Get the direction to use here.
+                switch (currentDirection) {
+                    case 'bottom':
+                        arcY += _.gap;
+                        break;
+                    case 'top':
+                        arcY -= _.gap;
+                        break;
+                    case 'left':
+                        arcX -= _.gap;
+                        break;
+                    case 'right':
+                        arcX += _.gap;
+                        break;
+                }
+
+                if (true === _.circleArray[i].xcenter) {
+                    arcX = _.canvas.width() / 2;
+                }
+
+                _.ctx.arc(arcX, arcY, _.circleArray[i].radius, 0, Math.PI * 2, true);
+
+                _.ctx.fill();
+                _.ctx.closePath();
+                pathCounter++;
+
+            }
+            _.ctx.restore();
+        }
 
         /**
          * Draw all the circles within the circleArray to the canvas.
