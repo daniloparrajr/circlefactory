@@ -29,8 +29,9 @@
                 y: 15,
                 path: [],
             };
-            _.directionCrawler = 0;
-            _.currentDirection = 0;
+            _.pathCrawler = 0;
+            _.currentDirection = '';
+            _.xCenter = false;
             _.directionCount = 0;
             _.pathCounter = 1;
 
@@ -53,9 +54,6 @@
             _.canvas.attr('width', _.canvas.parent().outerWidth());
             _.canvas.attr('height', _.canvas.parent().outerHeight());
 
-            _.clearCanvas();
-            _.drawCircles();
-
             window.addEventListener('resize', function () {
                 _.canvas.attr('width', _.canvas.parent().outerWidth());
                 _.canvas.attr('height', _.canvas.parent().outerHeight());
@@ -66,7 +64,7 @@
         };
 
         /**
-         * Add a new circle object to the array.
+         * Add a new circle object to the circle array.
          *
          * @param int x new circle x axis.
          * @param int y new circle y axis.
@@ -89,6 +87,7 @@
             _.canvas[0].setAttribute('width', style_width * this.dpi);
         };
 
+
         /**
          * Clear the canvas inserted to the DOM by the plugin.
          *
@@ -104,46 +103,56 @@
          */
         CircleFactory.prototype.updateCircles = function () {
             var _ = this;
+
             for (var i = 0; i < _.circleArray.length; i++) {
                 // Increase circle opacity if aplha is less than 1
                 if (_.circleArray[i].alpha < 1) {
                     _.circleArray[i].alpha += _.delta;
                 }
+
                 if (_.circleArray[_.circleArray.length - 1].alpha >= 1) {
+                    var newX = _.circleArray[_.circleArray.length - 1].x;
+                    var newY = _.circleArray[_.circleArray.length - 1].y;
                     // Dont add if we reach to end of totalCount;
                     if (_.circleArray.length === _.totalCount) {
                         continue;
                     }
-                    _.currentDirection = _._options.path[_.directionCrawler].direction;
-                    _.directionCount = _._options.path[_.directionCrawler].count;
+                    _.currentDirection = _._options.path[_.pathCrawler].direction;
+                    _.xCenter = _._options.path[_.pathCrawler].xCenter;
+                    _.directionCount = _._options.path[_.pathCrawler].count;
                     // Determine the direction.
                     if (_.pathCounter === _.directionCount) {
-                            _.directionCrawler++;
-                        if ( _.directionCrawler === _._options.path.length) {
-                            _.directionCrawler = _._options.path.length - 1;
+                        _.pathCrawler++;
+                        if (_.pathCrawler === _._options.path.length) {
+                            _.pathCrawler = _._options.path.length - 1;
                         }
                         // Change Particle Direction.
-                        _.currentDirection = _._options.path[_.directionCrawler].direction;
+                        _.currentDirection = _._options.path[_.pathCrawler].direction;
+                        _.xCenter = _._options.path[_.pathCrawler].xCenter;
                         _.pathCounter = 0;
                     }
-
-                    _.addCircle(_.circleArray[_.circleArray.length - 1].x, _.circleArray[_.circleArray.length - 1].y);
 
                     // Get the direction to use here.
                     switch (_.currentDirection) {
                         case 'bottom':
-                            _.circleArray[_.circleArray.length - 1].y += _.gap;
+                            newY = _.circleArray[_.circleArray.length - 1].y + _.gap;
                             break;
                         case 'top':
-                            _.circleArray[_.circleArray.length - 1].y -= _.gap;
+                            newY = _.circleArray[_.circleArray.length - 1].y - _.gap;
                             break;
                         case 'left':
-                            _.circleArray[_.circleArray.length - 1].x -= _.gap;
+                            newX = _.circleArray[_.circleArray.length - 1].x - _.gap;
                             break;
                         case 'right':
-                            _.circleArray[_.circleArray.length - 1].x += _.gap;
+                            newX = _.circleArray[_.circleArray.length - 1].x + _.gap;
                             break;
                     }
+
+                    if (_.xCenter === true) {
+                        newX = _.canvas.width() / 2;
+                    }
+
+                    _.addCircle(newX, newY);
                     _.pathCounter++;
                 }
             }
@@ -175,8 +184,17 @@
 
         CircleFactory.prototype.animate = function () {
             var _ = this;
+            var circleX = 0;
+
+            if ('center' === _._options.x) {
+                circleX = $canvas.width() / 2;
+                _.addCircle(circleX, _._options.y, true);
+            } else {
+                _.addCircle(_._options.x, _._options.y);
+            }
+
             _.getTotalCount();
-            _.addCircle(_._options.x, _._options.y);
+
             window.requestAnimationFrame(animateCircles);
         };
 
@@ -187,7 +205,7 @@
                 _.clearCanvas();
                 _.updateCircles();
                 _.drawCircles();
-                if (_.circleArray.length !== _.totalCount || _.circleArray[_.circleArray.length - 1 ].alpha < 1) {
+                if (_.circleArray.length !== _.totalCount || _.circleArray[_.circleArray.length - 1].alpha < 1) {
                     window.requestAnimationFrame(animateCircles);
                 }
             }
@@ -243,8 +261,8 @@
             var options = (typeof methodOrOptions === 'object') ? methodOrOptions : undefined;
 
             function init() {
-                $canvas = insertCanvas( $(this) );
-                $canvas = $( $canvas );
+                $canvas = insertCanvas($(this));
+                $canvas = $($canvas);
                 var circleFactory = new CircleFactory($canvas, options);
                 circleFactory.resizeCanvas();
                 $(this).data('circleFactory', circleFactory);
