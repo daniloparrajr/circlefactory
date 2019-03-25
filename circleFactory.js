@@ -4,6 +4,7 @@
 
         var method = (typeof methodOrOptions === 'string') ? methodOrOptions : undefined;
         var $canvas;
+        var element = $(this);
 
         var Circle = function (x, y) {
             var _ = this;
@@ -181,7 +182,7 @@
 
         // Animating function
         function animateCircles() {
-            var _ = $canvas.data('circleFactory');
+            var _ = element.data('circleFactory');
             if (_._options.path.length > 0) {
                 _.clearCanvas();
                 _.updateCircles();
@@ -190,6 +191,16 @@
                     window.requestAnimationFrame(animateCircles);
                 }
             }
+        }
+
+        /**
+         * Inserts canvas element to the dom element specified.
+         *
+         * @param string $el canvas id inserted in the dom element.
+         */
+        function insertCanvas($el) {
+            $($el).append('<canvas id="' + $($el).attr('id') + '-canvas" class="section-canvas">Your browser does not support canvas!</canvas>');
+            return '#' + $($el).attr('id') + '-canvas';
         }
 
         if (method) {
@@ -232,10 +243,11 @@
             var options = (typeof methodOrOptions === 'object') ? methodOrOptions : undefined;
 
             function init() {
-                $canvas = $(this);
+                $canvas = insertCanvas( $(this) );
+                $canvas = $( $canvas );
                 var circleFactory = new CircleFactory($canvas, options);
                 circleFactory.resizeCanvas();
-                $canvas.data('circleFactory', circleFactory);
+                $(this).data('circleFactory', circleFactory);
             }
             return this.each(init);
         }
